@@ -1,53 +1,6 @@
-from overkill.sinks import InotifySink
+from overkill.sinks import FilecountSink
 from overkill.sources import Source
-import pyinotify
 import os
-
-class FilecountSink(InotifySink):
-        add_events = pyinotify.IN_MOVED_TO | pyinotify.IN_CREATE
-        remove_events = pyinotify.IN_MOVED_FROM | pyinotify.IN_DELETE
-        watchdirs = []
-        _count = None
-
-        def start(self):
-            if not self.watches:
-                all_events = self.add_events | self.remove_events
-                self.watches = [(wdir, all_events) for wdir in self.watchdirs]
-            # Initialize Count
-            # Asking for it initializes and sends it
-            self.count
-            return super().start()
-
-        def matches(self, path):
-            return True
-
-        @property
-        def count(self):
-            if self._count is None:
-                self.count = sum(sum(
-                    1 for f in os.listdir(mdir)
-                    if self.matches(os.path.join(mdir, f))
-                ) for mdir in self.watchdirs)
-            return self._count
-
-        @count.setter
-        def count(self, value):
-            if (self._count != value):
-                self._count = value
-                self.count_changed(self._count)
-
-        def file_changed(self, event):
-            if not self.matches(event.pathname):
-                return
-            if event.mask & self.add_events:
-                self.count += 1
-            elif event.mask & self.remove_events:
-                self.count -= 1
-            else:
-                return
-
-        def count_changed(self, count):
-            raise NotImplementedError()
 
 class MaildirSource(Source, FilecountSink):
     publishes = ["mailcount"]
