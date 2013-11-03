@@ -18,12 +18,15 @@ class FilecountSink(InotifySink):
             self.count
             return super().start()
 
+        def matches(self, path):
+            return True
+
         @property
         def count(self):
             if self._count is None:
                 self.count = sum(sum(
                     1 for f in os.listdir(mdir)
-                    if os.path.isfile(os.path.join(mdir, f))
+                    if self.matches(os.path.join(mdir, f))
                 ) for mdir in self.watchdirs)
             return self._count
 
@@ -33,10 +36,12 @@ class FilecountSink(InotifySink):
                 self._count = value
                 self.count_changed(self._count)
 
-        def file_changed(self, path, event):
-            if event & self.add_events:
+        def file_changed(self, event):
+            if not self.matches(event.pathname):
+                return
+            if event.mask & self.add_events:
                 self.count += 1
-            elif event & self.remove_events:
+            elif event.mask & self.remove_events:
                 self.count -= 1
             else:
                 return
@@ -55,9 +60,14 @@ class MaildirSource(Source, FilecountSink):
         self.push_updates({"mailcount": self.count})
 
 class MailqueueSource(Source, FilecountSink):
+    publishes = ["mailqueue"]
+
     def __init__(self, mailqueue):
         self.watchdirs = [mailqueue]
         super().__init__()
+
+    def matches(self, path):
+        return path[-5:] == '.mail'
 
     def count_changed(self, count):
         self.push_updates({"mailqueue": count})
