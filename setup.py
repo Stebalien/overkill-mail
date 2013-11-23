@@ -17,7 +17,7 @@
 
 from setuptools import setup, find_packages
 setup(
-    name = "overkill-extra-mail",
+    name = "overkill-mail",
     version = "0.1",
     install_requires=["overkill"],
     packages = find_packages(),
@@ -26,7 +26,7 @@ setup(
     author_email = "steven@stebalien.com",
     description = "Maildir data source and notification sink for overkill.",
     extras_require = {
-        "Notification Sink": ["overkill-extra-notify"]
+        "Notification Sink": ["overkill-notify"]
     },
     license = "GPL3",
     url = "http://stebalien.com"
