@@ -15,8 +15,9 @@
 #    along with Overkill-mail.  If not, see <http://www.gnu.org/licenses/>.
 ##
 
-from overkill.sinks import FilecountSink
+from overkill.sinks import FilecountSink, InotifySink
 from overkill.sources import Source
+import pyinotify
 import os
 
 class MaildirSource(Source, FilecountSink):
@@ -29,6 +30,47 @@ class MaildirSource(Source, FilecountSink):
     def count_changed(self, count):
         self.push_updates({"mailcount": self.count})
 
+
+try:
+    from notmuch import Database
+
+    class NotmuchSource(Source, InotifySink):
+        publishes = ["mailcount"]
+
+        def __init__(self):
+            self.count = 0
+
+            with Database() as db:
+                path = db.get_path() + '/.notmuch/xapian/'
+
+            self.watches = [{
+                "path": path,
+                "mask": pyinotify.IN_MOVED_TO
+                        | pyinotify.IN_CREATE
+                        | pyinotify.IN_MOVED_FROM
+                        | pyinotify.IN_DELETE
+                        | pyinotify.IN_MODIFY,
+                "rec": True,
+                "auto_add": True,
+            }]
+            super().__init__()
+
+        def on_start(self):
+            self.recount()
+
+        def file_changed(self, evt):
+            self.recount()
+
+        def recount(self) -> int:
+            """ Count Unread Email """
+            with Database() as db:
+                count = db.create_query('tag:unread and tag:inbox').count_messages()
+            if count != self.count:
+                self.count = count
+                self.push_updates({"mailcount": self.count})
+
+except ImportError:
+    pass
 class MailqueueSource(Source, FilecountSink):
     publishes = ["mailqueue"]
 
