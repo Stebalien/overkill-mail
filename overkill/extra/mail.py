@@ -64,7 +64,7 @@ try:
         def recount(self) -> int:
             """ Count Unread Email """
             with Database() as db:
-                count = db.create_query('tag:unread and tag:inbox').count_messages()
+                count = db.create_query('tag:unread and tag:inbox and not tag:new').count_messages()
             if count != self.count:
                 self.count = count
                 self.push_updates({"mailcount": self.count})
