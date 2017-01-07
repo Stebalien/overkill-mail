@@ -99,7 +99,7 @@ else:
 
         def handle_update(self, update):
             if self.old_count < update:
-                self.message = "You have {} new message{}.".format(update, "" if update == 1 else "s")
+                self.message = f"You have {update} new message(s)"
                 self.show()
             self.old_count = update
 
